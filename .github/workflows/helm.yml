@@ -99,14 +99,40 @@ jobs:
           echo "$KUBE_CONFIG_DATA" | base64 --decode > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
 
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4.0.1
+
       - name: Deploy chart
         run: |
           release_name="${HELM_RELEASE_NAME:-preskater}"
           namespace="${HELM_NAMESPACE:-default}"
-          values_file="${HELM_VALUES_FILE:-values.yaml}"
+          values_file="${HELM_VALUES_FILE:-}"
+          if [[ -z "$values_file" ]]; then
+            if [[ -f "values.server.yaml" ]]; then
+              values_file="values.server.yaml"
+            else
+              values_file="values.yaml"
+            fi
+          fi
           helm upgrade --install "$release_name" . \
             --namespace "$namespace" \
             --create-namespace \
             -f "$values_file" \
             --wait \
             --timeout 5m
+
+      - name: Verify deployed pods are Ready
+        run: |
+          release_name="${HELM_RELEASE_NAME:-preskater}"
+          namespace="${HELM_NAMESPACE:-default}"
+
+          if ! kubectl wait \
+            --namespace "$namespace" \
+            --for=condition=Ready \
+            pod \
+            -l "app.kubernetes.io/instance=$release_name" \
+            --timeout=180s; then
+            kubectl get pods --namespace "$namespace" -o wide
+            kubectl describe pods --namespace "$namespace" -l "app.kubernetes.io/instance=$release_name"
+            exit 1
+          fi
