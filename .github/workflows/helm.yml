@@ -72,3 +72,41 @@ jobs:
           else
             ct install --config .ct.yaml --target-branch "${{ steps.chart-scope.outputs.target_branch }}"
           fi
+
+  deploy:
+    name: Deploy Chart To Server
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5.0.0
+        with:
+          version: v4.1.4
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          if [[ -z "$KUBE_CONFIG_DATA" ]]; then
+            echo "KUBE_CONFIG_DATA secret is required"
+            exit 1
+          fi
+          mkdir -p "$HOME/.kube"
+          echo "$KUBE_CONFIG_DATA" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Deploy chart
+        run: |
+          release_name="${HELM_RELEASE_NAME:-preskater}"
+          namespace="${HELM_NAMESPACE:-default}"
+          values_file="${HELM_VALUES_FILE:-values.yaml}"
+          helm upgrade --install "$release_name" . \
+            --namespace "$namespace" \
+            --create-namespace \
+            -f "$values_file" \
+            --wait \
+            --timeout 5m
