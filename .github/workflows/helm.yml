@@ -1,0 +1,74 @@
+name: Helm
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: helm-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5.0.0
+        with:
+          version: v4.1.4
+
+      - uses: actions/setup-python@v6.2.0
+        with:
+          python-version: 3.14.4
+          check-latest: true
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.8.0
+
+      - name: Determine chart-testing scope
+        id: chart-scope
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            target_branch="${{ github.event.pull_request.base.ref }}"
+            changed=$(ct list-changed --config .ct.yaml --target-branch "$target_branch")
+            if [[ -n "$changed" ]]; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+            fi
+            echo "target_branch=$target_branch" >> "$GITHUB_OUTPUT"
+          else
+            # On push to main, validate all charts instead of diffing against itself.
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "all=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run chart-testing (lint)
+        if: steps.chart-scope.outputs.changed == 'true'
+        run: |
+          if [[ "${{ steps.chart-scope.outputs.all }}" == 'true' ]]; then
+            ct lint --config .ct.yaml --all
+          else
+            ct lint --config .ct.yaml --target-branch "${{ steps.chart-scope.outputs.target_branch }}"
+          fi
+
+      - name: Create kind cluster
+        if: steps.chart-scope.outputs.changed == 'true'
+        uses: helm/kind-action@v1.14.0
+
+      - name: Run chart-testing (install)
+        if: steps.chart-scope.outputs.changed == 'true'
+        run: |
+          if [[ "${{ steps.chart-scope.outputs.all }}" == 'true' ]]; then
+            ct install --config .ct.yaml --all
+          else
+            ct install --config .ct.yaml --target-branch "${{ steps.chart-scope.outputs.target_branch }}"
+          fi
