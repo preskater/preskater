@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { GalleryVerticalEndIcon } from "lucide-react"
 import { useForm, type SubmitHandler } from "react-hook-form"
@@ -18,13 +17,15 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { authClient } from "@/lib/auth-client"
-import { signUpSchema, type SignUpFormData } from "@/lib/schemas/auth"
+import {
+  forgotPasswordSchema,
+  type ForgotPasswordFormData,
+} from "@/lib/schemas/auth"
 
-export function SignUpForm({
+export function ForgotPasswordForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null)
 
@@ -32,28 +33,22 @@ export function SignUpForm({
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<SignUpFormData>({
-    resolver: zodResolver(signUpSchema),
+  } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
     mode: "onTouched",
-    defaultValues: { name: "", email: "", password: "" },
+    defaultValues: { email: "" },
   })
 
-  const onSubmit: SubmitHandler<SignUpFormData> = async (data) => {
+  const onSubmit: SubmitHandler<ForgotPasswordFormData> = async (data) => {
     setServerError(null)
 
-    const { error } = await authClient.signUp.email({
-      name: data.name,
+    const { error } = await authClient.requestPasswordReset({
       email: data.email,
-      password: data.password,
-      callbackURL: "/dashboard",
+      redirectTo: "/reset-password",
     })
 
     if (error) {
-      setServerError(
-        error.code === "USER_ALREADY_EXISTS"
-          ? "Un compte existe déjà avec cette adresse email."
-          : "Création du compte impossible. Merci de réessayer."
-      )
+      setServerError("Demande impossible. Merci de réessayer.")
       return
     }
 
@@ -70,16 +65,12 @@ export function SignUpForm({
             </div>
             <h1 className="text-xl font-bold">Check your inbox</h1>
             <FieldDescription>
-              We sent a verification link to <strong>{submittedEmail}</strong>.
-              Follow it to activate your account.
+              If an account exists for <strong>{submittedEmail}</strong>, a
+              password reset link is on its way.
             </FieldDescription>
           </div>
           <Field>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push("/sign-in")}
-            >
+            <Button type="button" variant="outline" render={<Link href="/sign-in" />}>
               Back to sign in
             </Button>
           </Field>
@@ -102,23 +93,11 @@ export function SignUpForm({
               </div>
               <span className="sr-only">Preskater</span>
             </Link>
-            <h1 className="text-xl font-bold">Welcome to Preskater</h1>
+            <h1 className="text-xl font-bold">Reset your password</h1>
             <FieldDescription>
-              Already have an account? <Link href="/sign-in">Sign in</Link>
+              Enter your email and we&apos;ll send you a reset link.
             </FieldDescription>
           </div>
-
-          <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor="name">Name</FieldLabel>
-            <Input
-              id="name"
-              autoComplete="name"
-              placeholder="John Doe"
-              aria-invalid={!!errors.name}
-              {...register("name")}
-            />
-            <FieldError errors={[errors.name]} />
-          </Field>
 
           <Field data-invalid={!!errors.email}>
             <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -133,32 +112,18 @@ export function SignUpForm({
             <FieldError errors={[errors.email]} />
           </Field>
 
-          <Field data-invalid={!!errors.password}>
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              aria-invalid={!!errors.password}
-              {...register("password")}
-            />
-            <FieldDescription>At least 8 characters.</FieldDescription>
-            <FieldError errors={[errors.password]} />
-          </Field>
-
           <FieldError errors={serverError ? [{ message: serverError }] : []} />
 
           <Field>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating account…" : "Create Account"}
+              {isSubmitting ? "Sending…" : "Send reset link"}
             </Button>
           </Field>
+          <FieldDescription className="text-center">
+            Remembered it? <Link href="/sign-in">Sign in</Link>
+          </FieldDescription>
         </FieldGroup>
       </form>
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <Link href="/terms">Terms of Service</Link>{" "}
-        and <Link href="/privacy">Privacy Policy</Link>.
-      </FieldDescription>
     </div>
   )
 }

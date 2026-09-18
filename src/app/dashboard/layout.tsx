@@ -1,8 +1,22 @@
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
+import { auth } from "@/lib/auth"
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function DashboardLayout({
+  children,
+}: LayoutProps<"/dashboard">) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
+
+  if (!session) {
+    redirect("/sign-in")
+  }
+
   return (
     <SidebarProvider
       style={
@@ -12,7 +26,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" />
+      <AppSidebar
+        variant="inset"
+        user={{
+          name: session.user.name,
+          email: session.user.email,
+          avatar: session.user.image ?? "",
+        }}
+      />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">
@@ -22,5 +43,5 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </div>
       </SidebarInset>
     </SidebarProvider>
-  );
+  )
 }
