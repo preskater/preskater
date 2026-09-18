@@ -90,12 +90,6 @@ export const departmentLabels: Record<string, string> = {
   FINANCE: "Finance",
 }
 
-export const memberRoleLabels: Record<string, string> = {
-  owner: "Propriétaire",
-  admin: "Administrateur",
-  member: "Membre",
-}
-
 export function optionsFromLabels(
   labels: Record<string, string>
 ): { label: string; value: string }[] {

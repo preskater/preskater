@@ -6,7 +6,6 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
 const titles: { prefix: string; title: string }[] = [
-  { prefix: "/dashboard/settings/organization", title: "Organisation" },
   { prefix: "/dashboard/accounts", title: "Comptes" },
   { prefix: "/dashboard/contacts", title: "Contacts" },
   { prefix: "/dashboard/leads", title: "Prospects" },

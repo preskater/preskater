@@ -29,7 +29,7 @@ function toData(values: ContactFormData) {
 export async function createContact(
   values: Record<string, unknown>
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const parsed = contactSchema.safeParse(values)
 
   if (!parsed.success) {
@@ -37,7 +37,7 @@ export async function createContact(
   }
 
   await prisma.contact.create({
-    data: { ...toData(parsed.data), organizationId: context.organizationId },
+    data: toData(parsed.data),
   })
 
   revalidatePath("/dashboard/contacts")
@@ -49,7 +49,7 @@ export async function updateContact(
   values: Record<string, unknown>,
   id?: string
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   if (!id) return fail("Contact introuvable.")
 
@@ -60,7 +60,7 @@ export async function updateContact(
   }
 
   const existing = await prisma.contact.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 
@@ -73,10 +73,10 @@ export async function updateContact(
 }
 
 export async function deleteContact(id: string): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const existing = await prisma.contact.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 

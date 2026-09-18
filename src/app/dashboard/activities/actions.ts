@@ -40,10 +40,7 @@ export async function createActivity(
   }
 
   await prisma.activity.create({
-    data: {
-      ...toData(parsed.data, context.user.id),
-      organizationId: context.organizationId,
-    },
+    data: toData(parsed.data, context.user.id),
   })
 
   revalidateRelated(values)
@@ -65,7 +62,7 @@ export async function updateActivity(
   }
 
   const existing = await prisma.activity.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true, userId: true },
   })
 
@@ -81,10 +78,10 @@ export async function updateActivity(
 }
 
 export async function deleteActivity(id: string): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const existing = await prisma.activity.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 

@@ -8,11 +8,11 @@ import {
 import { ContactsTable } from "./contacts-table"
 
 export default async function ContactsPage() {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const [rows, accountOptions, ownerOptions] = await Promise.all([
-    listContacts(context.organizationId),
-    getAccountOptions(context.organizationId),
-    getEmployeeOptions(context.organizationId),
+    listContacts(),
+    getAccountOptions(),
+    getEmployeeOptions(),
   ])
 
   return (

@@ -7,10 +7,6 @@ import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
-  OrganizationSwitcher,
-  type OrganizationSummary,
-} from "@/components/crm/organization-switcher"
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -29,9 +25,7 @@ import {
   LayoutDashboardIcon,
   PackageIcon,
   SearchIcon,
-  Settings2Icon,
   ShoppingCartIcon,
-  SlidersHorizontalIcon,
   TargetIcon,
   UsersIcon,
   WrenchIcon,
@@ -39,9 +33,6 @@ import {
 
 export function AppSidebar({
   user,
-  organizations,
-  activeOrganizationId,
-  canCreateOrganization,
   isAdmin,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
@@ -51,9 +42,6 @@ export function AppSidebar({
     avatar: string
     role: string
   }
-  organizations: OrganizationSummary[]
-  activeOrganizationId: string
-  canCreateOrganization: boolean
   isAdmin: boolean
 }) {
   const navMain = [
@@ -81,11 +69,6 @@ export function AppSidebar({
 
   const navAdmin = [
     { title: "Employés", url: "/dashboard/employees", icon: <UsersIcon /> },
-    {
-      title: "Organisation",
-      url: "/dashboard/settings/organization",
-      icon: <SlidersHorizontalIcon />,
-    },
   ]
 
   return (
@@ -102,11 +85,6 @@ export function AppSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <OrganizationSwitcher
-          organizations={organizations}
-          activeId={activeOrganizationId}
-          canCreate={canCreateOrganization}
-        />
       </SidebarHeader>
       <SidebarContent>
         <NavMain title="Pilotage" items={navMain} />
@@ -126,11 +104,6 @@ export function AppSidebar({
               title: "Recherche",
               url: "/dashboard",
               icon: <SearchIcon />,
-            },
-            {
-              title: "Paramètres",
-              url: "/dashboard/settings/organization",
-              icon: <Settings2Icon />,
             },
           ]}
           className="mt-auto"

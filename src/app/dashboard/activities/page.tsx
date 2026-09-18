@@ -11,7 +11,7 @@ import {
 import { ActivitiesTable } from "./activities-table"
 
 export default async function ActivitiesPage() {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const [
     rows,
     accountOptions,
@@ -20,12 +20,12 @@ export default async function ActivitiesPage() {
     leadOptions,
     orderOptions,
   ] = await Promise.all([
-    listActivities(context.organizationId),
-    getAccountOptions(context.organizationId),
-    getContactOptions(context.organizationId),
-    getOpportunityOptions(context.organizationId),
-    getLeadOptions(context.organizationId),
-    getOrderOptions(context.organizationId),
+    listActivities(),
+    getAccountOptions(),
+    getContactOptions(),
+    getOpportunityOptions(),
+    getLeadOptions(),
+    getOrderOptions(),
   ])
 
   return (

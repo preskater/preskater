@@ -19,13 +19,12 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
-  role        String?      @default("AGENT")
-  department  String?
-  jobTitle    String?
-  phone       String?
-  managerId   String?
-  members     Member[]
-  invitations Invitation[]
+  role               String?  @default("AGENT")
+  department         String?
+  jobTitle           String?
+  phone              String?
+  managerId          String?
+  mustChangePassword Boolean  @default(true)
 
   ownedAccounts      CrmAccount[]             @relation("AccountOwner")
   ownedContacts      Contact[]                @relation("ContactOwner")
@@ -49,8 +48,6 @@ model Session {
   userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  activeOrganizationId String?
 
   @@unique([token])
   @@index([userId])
@@ -87,61 +84,6 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
-}
-
-model Organization {
-  id          String       @id
-  name        String
-  slug        String
-  logo        String?
-  createdAt   DateTime
-  metadata    String?
-  members     Member[]
-  invitations Invitation[]
-
-  accounts       CrmAccount[]
-  contacts       Contact[]
-  leads          Lead[]
-  opportunities  Opportunity[]
-  products       Product[]
-  services       Service[]
-  orders         Order[]
-  activities     Activity[]
-  accountServices AccountService[]
-
-  @@unique([slug])
-  @@map("organization")
-}
-
-model Member {
-  id             String       @id
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role           String       @default("member")
-  createdAt      DateTime
-
-  @@index([organizationId])
-  @@index([userId])
-  @@map("member")
-}
-
-model Invitation {
-  id             String       @id
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  email          String
-  role           String?
-  status         String       @default("pending")
-  expiresAt      DateTime
-  createdAt      DateTime     @default(now())
-  inviterId      String
-  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@index([email])
-  @@map("invitation")
 }
 
 enum AccountType {
@@ -224,8 +166,6 @@ enum ActivityType {
 
 model CrmAccount {
   id             String      @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
   type           AccountType @default(PROSPECT)
   industry       String?
@@ -252,16 +192,13 @@ model CrmAccount {
   activities    Activity[]
   convertedLeads Lead[]      @relation("LeadConvertedAccount")
 
-  @@index([organizationId])
   @@index([ownerId])
-  @@index([organizationId, name])
+  @@index([name])
   @@map("crm_account")
 }
 
 model Contact {
   id             String      @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   firstName      String
   lastName       String
   email          String?
@@ -286,17 +223,14 @@ model Contact {
   activities    Activity[]
   convertedLeads Lead[]       @relation("LeadConvertedContact")
 
-  @@index([organizationId])
   @@index([accountId])
   @@index([ownerId])
-  @@index([organizationId, lastName])
+  @@index([lastName])
   @@map("contact")
 }
 
 model Lead {
   id                   String      @id @default(cuid())
-  organizationId       String
-  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   firstName            String
   lastName             String
   company              String?
@@ -321,16 +255,13 @@ model Lead {
 
   activities Activity[]
 
-  @@index([organizationId])
   @@index([ownerId])
-  @@index([organizationId, status])
+  @@index([status])
   @@map("lead")
 }
 
 model Opportunity {
   id             String           @id @default(cuid())
-  organizationId String
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
   accountId      String?
   account        CrmAccount?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
@@ -350,10 +281,9 @@ model Opportunity {
   activities  Activity[]
   convertedFromLeads Lead[]      @relation("LeadConvertedOpportunity")
 
-  @@index([organizationId])
   @@index([accountId])
   @@index([ownerId])
-  @@index([organizationId, stage])
+  @@index([stage])
   @@map("opportunity")
 }
 
@@ -374,8 +304,6 @@ model OpportunityContactRole {
 
 model Product {
   id             String        @id @default(cuid())
-  organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
   sku            String
   description    String?
@@ -390,8 +318,7 @@ model Product {
   orderItems           OrderItem[]
   services             Service[]
 
-  @@unique([organizationId, sku])
-  @@index([organizationId])
+  @@unique([sku])
   @@map("product")
 }
 
@@ -412,21 +339,18 @@ model OpportunityLineItem {
 }
 
 model Service {
-  id             String        @id @default(cuid())
-  organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name           String
-  description    String?
-  price          Decimal       @default(0) @db.Decimal(14, 2)
-  status         ServiceStatus @default(ACTIVE)
-  productId      String?
-  product        Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal       @default(0) @db.Decimal(14, 2)
+  status      ServiceStatus @default(ACTIVE)
+  productId   String?
+  product     Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   accounts AccountService[]
 
-  @@index([organizationId])
   @@index([productId])
   @@map("service")
 }
@@ -444,19 +368,13 @@ model AccountService {
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
   @@unique([accountId, serviceId])
   @@index([serviceId])
-  @@index([organizationId])
   @@map("account_service")
 }
 
 model Order {
   id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   orderNumber    String
   accountId      String?
   account        CrmAccount?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
@@ -476,12 +394,11 @@ model Order {
   items      OrderItem[]
   activities Activity[]
 
-  @@unique([organizationId, orderNumber])
-  @@index([organizationId])
+  @@unique([orderNumber])
   @@index([accountId])
   @@index([contactId])
   @@index([ownerId])
-  @@index([organizationId, status])
+  @@index([status])
   @@map("order")
 }
 
@@ -503,8 +420,6 @@ model OrderItem {
 
 model Activity {
   id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   type           ActivityType @default(NOTE)
   subject        String
   notes          String?
@@ -524,7 +439,6 @@ model Activity {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  @@index([organizationId])
   @@index([accountId])
   @@index([contactId])
   @@index([opportunityId])

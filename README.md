@@ -1,6 +1,9 @@
 # Preskater CRM
 
-A multi-tenant CRM built with Next.js (App Router), Prisma, and Better Auth.
+A single-tenant CRM for internal use, built with Next.js (App Router), Prisma, and Better Auth.
+
+There is no public sign-up: accounts are provisioned with a seed script. Everyone
+shares the same CRM workspace.
 
 ## Getting Started
 
@@ -9,37 +12,44 @@ npm install
 cp .env.example .env       # fill in the values
 npm run db:up              # start PostgreSQL (Docker, host port 5433)
 npm run db:migrate         # apply migrations
+npm run db:seed            # create the administrator account
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Bootstrap the first administrator
+## Accounts and first sign-in
 
-There is no seed script. The **first account** created on a fresh database is
-automatically promoted to `ADMIN` and marked email-verified, so it can sign in
-immediately, create the first organization during onboarding, and invite others.
+The seed creates a single administrator account,
+`administrator@preskater.com`, using the password from the
+`ADMINISTRATOR_PASSWORD` environment variable. Set it in `.env` (and
+`.env.prod` for Docker) before running:
 
-1. Sign up at `/sign-up`. The first user is redirected to `/onboarding`.
-2. Create the first organization. Only administrators may create organizations.
-3. Invite teammates from `/dashboard/settings/organization`.
+```bash
+npm run db:seed
+```
 
-### Verification and invitations
+The seed fails if `ADMINISTRATOR_PASSWORD` is unset. The administrator is
+created verified and is **not** forced to change the password on first sign-in,
+so pick a strong value.
 
-Email delivery is not wired up. Better Auth logs the relevant URLs to the server
-console instead, so an operator can relay them:
+- Administrators (`role: "ADMIN"`) can manage employees under
+  `/dashboard/employees`.
+- The seed is idempotent: re-running it skips the account if it already exists,
+  so it is safe after deploys.
+
+### Forgotten passwords
+
+There is no mail provider configured. Better Auth logs reset URLs to the server
+console so an operator can relay them:
 
 ```bash
 docker compose logs -f app
-# [verify-email] user@example.com
-# http://localhost:3000/api/auth/verify-email?token=...&callbackURL=...
-# [invitation] user@example.com → Acme
-# http://localhost:3000/invitations/<id>
+# [reset-password] user@example.com
+# http://localhost:3000/api/auth/reset-password?token=...
 ```
 
-Every account after the first must verify its email before signing in. Invited
-users sign up, verify via the logged link, then open `/invitations/<id>` to join
-the organization.
+Users request a reset from `/forgot-password`; you pass them the logged link.
 
 ## Docker
 
@@ -48,5 +58,9 @@ cp .env.prod.example .env.prod
 docker compose up --build -d
 ```
 
-The `migrate` service runs `prisma migrate deploy` before the app starts. It
-never seeds data, so redeploying does not touch existing rows.
+The `migrate` service runs `prisma migrate deploy` and then `prisma db seed`
+before the app starts, so a fresh volume is provisioned automatically. The seed
+is idempotent, so redeploys leave existing accounts untouched.
+
+For local (non-Docker) development, run `npm run db:seed` once after
+`npm run db:migrate`.

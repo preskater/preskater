@@ -27,13 +27,10 @@ export function SignInForm({
 }: React.ComponentProps<"div"> & { callbackUrl?: string }) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
-  const [emailNotVerified, setEmailNotVerified] = useState(false)
-  const [resent, setResent] = useState(false)
 
   const {
     register,
     handleSubmit,
-    getValues,
     formState: { errors, isSubmitting },
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
@@ -43,8 +40,6 @@ export function SignInForm({
 
   const onSubmit: SubmitHandler<SignInFormData> = async (data) => {
     setServerError(null)
-    setEmailNotVerified(false)
-    setResent(false)
 
     const { error } = await authClient.signIn.email({
       email: data.email,
@@ -52,14 +47,6 @@ export function SignInForm({
     })
 
     if (error) {
-      if (error.code === "EMAIL_NOT_VERIFIED") {
-        setEmailNotVerified(true)
-        setServerError(
-          "Votre email n'est pas encore vérifié. Consultez votre boîte de réception."
-        )
-        return
-      }
-
       setServerError(
         error.status === 401
           ? "Email ou mot de passe incorrect."
@@ -70,21 +57,6 @@ export function SignInForm({
 
     router.push(callbackUrl)
     router.refresh()
-  }
-
-  async function handleResend() {
-    const email = getValues("email")
-    if (!email) return
-
-    setResent(false)
-    const { error } = await authClient.sendVerificationEmail({
-      email,
-      callbackURL: callbackUrl,
-    })
-
-    if (!error) {
-      setResent(true)
-    }
   }
 
   return (
@@ -102,9 +74,6 @@ export function SignInForm({
               <span className="sr-only">Preskater</span>
             </Link>
             <h1 className="text-xl font-bold">Welcome to Preskater</h1>
-            <FieldDescription>
-              Don&apos;t have an account? <Link href="/sign-up">Sign up</Link>
-            </FieldDescription>
           </div>
 
           <Field data-invalid={!!errors.email}>
@@ -141,19 +110,6 @@ export function SignInForm({
           </Field>
 
           <FieldError errors={serverError ? [{ message: serverError }] : []} />
-
-          {emailNotVerified && (
-            <Field>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleResend}
-                disabled={resent}
-              >
-                {resent ? "Verification email sent" : "Resend verification email"}
-              </Button>
-            </Field>
-          )}
 
           <Field>
             <Button type="submit" disabled={isSubmitting}>

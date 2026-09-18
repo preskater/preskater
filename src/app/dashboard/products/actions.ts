@@ -23,7 +23,7 @@ function toData(values: ProductFormData) {
 export async function createProduct(
   values: Record<string, unknown>
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const parsed = productSchema.safeParse(values)
 
   if (!parsed.success) {
@@ -32,7 +32,7 @@ export async function createProduct(
 
   try {
     await prisma.product.create({
-      data: { ...toData(parsed.data), organizationId: context.organizationId },
+      data: toData(parsed.data),
     })
   } catch (error) {
     if (
@@ -53,7 +53,7 @@ export async function updateProduct(
   values: Record<string, unknown>,
   id?: string
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   if (!id) return fail("Produit introuvable.")
 
@@ -64,7 +64,7 @@ export async function updateProduct(
   }
 
   const existing = await prisma.product.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 
@@ -87,10 +87,10 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const existing = await prisma.product.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 

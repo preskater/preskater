@@ -24,10 +24,10 @@ export default async function OpportunityDetailPage({
   params,
 }: PageProps<"/dashboard/opportunities/[id]">) {
   const { id } = await params
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const [opportunity, productOptions] = await Promise.all([
-    getOpportunity(context.organizationId, id),
-    getProductOptions(context.organizationId),
+    getOpportunity(id),
+    getProductOptions(),
   ])
 
   if (!opportunity) {

@@ -4,10 +4,10 @@ import { getProductOptions, listServices } from "@/lib/crm/queries"
 import { ServicesTable } from "./services-table"
 
 export default async function ServicesPage() {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const [rows, productOptions] = await Promise.all([
-    listServices(context.organizationId),
-    getProductOptions(context.organizationId),
+    listServices(),
+    getProductOptions(),
   ])
 
   return <ServicesTable rows={rows} productOptions={productOptions} />

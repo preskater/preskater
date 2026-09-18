@@ -7,27 +7,24 @@ const num = (value: unknown) => (value === null || value === undefined ? null : 
 
 export type Option = { label: string; value: string }
 
-async function ownerOptions(organizationId: string): Promise<Option[]> {
-  const members = await prisma.member.findMany({
-    where: { organizationId },
-    include: { user: { select: { id: true, name: true } } },
+async function ownerOptions(): Promise<Option[]> {
+  const users = await prisma.user.findMany({
+    select: { id: true, name: true },
     orderBy: { createdAt: "asc" },
   })
-  return members.map((member) => ({ label: member.user.name, value: member.user.id }))
+  return users.map((user) => ({ label: user.name, value: user.id }))
 }
 
-export async function getAccountOptions(organizationId: string): Promise<Option[]> {
+export async function getAccountOptions(): Promise<Option[]> {
   const accounts = await prisma.crmAccount.findMany({
-    where: { organizationId },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   })
   return accounts.map((account) => ({ label: account.name, value: account.id }))
 }
 
-export async function getContactOptions(organizationId: string): Promise<Option[]> {
+export async function getContactOptions(): Promise<Option[]> {
   const contacts = await prisma.contact.findMany({
-    where: { organizationId },
     select: { id: true, firstName: true, lastName: true },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   })
@@ -37,9 +34,8 @@ export async function getContactOptions(organizationId: string): Promise<Option[
   }))
 }
 
-export async function getProductOptions(organizationId: string): Promise<Option[]> {
+export async function getProductOptions(): Promise<Option[]> {
   const products = await prisma.product.findMany({
-    where: { organizationId },
     select: { id: true, name: true, sku: true },
     orderBy: { name: "asc" },
   })
@@ -49,18 +45,16 @@ export async function getProductOptions(organizationId: string): Promise<Option[
   }))
 }
 
-export async function getServiceOptions(organizationId: string): Promise<Option[]> {
+export async function getServiceOptions(): Promise<Option[]> {
   const services = await prisma.service.findMany({
-    where: { organizationId },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   })
   return services.map((service) => ({ label: service.name, value: service.id }))
 }
 
-export async function getOpportunityOptions(organizationId: string): Promise<Option[]> {
+export async function getOpportunityOptions(): Promise<Option[]> {
   const opportunities = await prisma.opportunity.findMany({
-    where: { organizationId },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   })
@@ -70,9 +64,8 @@ export async function getOpportunityOptions(organizationId: string): Promise<Opt
   }))
 }
 
-export async function getLeadOptions(organizationId: string): Promise<Option[]> {
+export async function getLeadOptions(): Promise<Option[]> {
   const leads = await prisma.lead.findMany({
-    where: { organizationId },
     select: { id: true, firstName: true, lastName: true, company: true },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   })
@@ -82,9 +75,8 @@ export async function getLeadOptions(organizationId: string): Promise<Option[]> 
   }))
 }
 
-export async function getOrderOptions(organizationId: string): Promise<Option[]> {
+export async function getOrderOptions(): Promise<Option[]> {
   const orders = await prisma.order.findMany({
-    where: { organizationId },
     select: { id: true, orderNumber: true },
     orderBy: { orderNumber: "desc" },
   })
@@ -94,8 +86,8 @@ export async function getOrderOptions(organizationId: string): Promise<Option[]>
   }))
 }
 
-export async function getEmployeeOptions(organizationId: string): Promise<Option[]> {
-  return ownerOptions(organizationId)
+export function getEmployeeOptions(): Promise<Option[]> {
+  return ownerOptions()
 }
 
 export function serializeUser(user: {
@@ -122,9 +114,8 @@ export function serializeUser(user: {
   }
 }
 
-export async function listAccounts(organizationId: string) {
+export async function listAccounts() {
   const accounts = await prisma.crmAccount.findMany({
-    where: { organizationId },
     include: {
       owner: { select: { name: true } },
       _count: { select: { contacts: true, opportunities: true, orders: true } },
@@ -154,9 +145,9 @@ export async function listAccounts(organizationId: string) {
 
 export type AccountRow = Awaited<ReturnType<typeof listAccounts>>[number]
 
-export async function getAccount(organizationId: string, id: string) {
+export async function getAccount(id: string) {
   const account = await prisma.crmAccount.findFirst({
-    where: { id, organizationId },
+    where: { id },
     include: {
       owner: { select: { name: true } },
       contacts: { orderBy: { lastName: "asc" } },
@@ -228,9 +219,8 @@ export async function getAccount(organizationId: string, id: string) {
   }
 }
 
-export async function listContacts(organizationId: string) {
+export async function listContacts() {
   const contacts = await prisma.contact.findMany({
-    where: { organizationId },
     include: {
       account: { select: { name: true } },
       owner: { select: { name: true } },
@@ -258,9 +248,8 @@ export async function listContacts(organizationId: string) {
 
 export type ContactRow = Awaited<ReturnType<typeof listContacts>>[number]
 
-export async function listLeads(organizationId: string) {
+export async function listLeads() {
   const leads = await prisma.lead.findMany({
-    where: { organizationId },
     include: { owner: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
   })
@@ -284,9 +273,8 @@ export async function listLeads(organizationId: string) {
 
 export type LeadRow = Awaited<ReturnType<typeof listLeads>>[number]
 
-export async function listOpportunities(organizationId: string) {
+export async function listOpportunities() {
   const opportunities = await prisma.opportunity.findMany({
-    where: { organizationId },
     include: {
       account: { select: { name: true } },
       owner: { select: { name: true } },
@@ -314,9 +302,9 @@ export async function listOpportunities(organizationId: string) {
 
 export type OpportunityRow = Awaited<ReturnType<typeof listOpportunities>>[number]
 
-export async function getOpportunity(organizationId: string, id: string) {
+export async function getOpportunity(id: string) {
   const opportunity = await prisma.opportunity.findFirst({
-    where: { id, organizationId },
+    where: { id },
     include: {
       account: { select: { name: true } },
       owner: { select: { name: true } },
@@ -370,9 +358,8 @@ export async function getOpportunity(organizationId: string, id: string) {
   }
 }
 
-export async function listProducts(organizationId: string) {
+export async function listProducts() {
   const products = await prisma.product.findMany({
-    where: { organizationId },
     orderBy: { name: "asc" },
   })
 
@@ -390,9 +377,8 @@ export async function listProducts(organizationId: string) {
 
 export type ProductRow = Awaited<ReturnType<typeof listProducts>>[number]
 
-export async function listServices(organizationId: string) {
+export async function listServices() {
   const services = await prisma.service.findMany({
-    where: { organizationId },
     include: {
       product: { select: { name: true } },
       _count: { select: { accounts: true } },
@@ -414,9 +400,8 @@ export async function listServices(organizationId: string) {
 
 export type ServiceRow = Awaited<ReturnType<typeof listServices>>[number]
 
-export async function listOrders(organizationId: string) {
+export async function listOrders() {
   const orders = await prisma.order.findMany({
-    where: { organizationId },
     include: {
       account: { select: { name: true } },
       owner: { select: { name: true } },
@@ -443,9 +428,9 @@ export async function listOrders(organizationId: string) {
 
 export type OrderRow = Awaited<ReturnType<typeof listOrders>>[number]
 
-export async function getOrder(organizationId: string, id: string) {
+export async function getOrder(id: string) {
   const order = await prisma.order.findFirst({
-    where: { id, organizationId },
+    where: { id },
     include: {
       account: { select: { name: true } },
       contact: { select: { firstName: true, lastName: true } },
@@ -479,9 +464,8 @@ export async function getOrder(organizationId: string, id: string) {
   }
 }
 
-export async function listActivities(organizationId: string) {
+export async function listActivities() {
   const activities = await prisma.activity.findMany({
-    where: { organizationId },
     include: {
       user: { select: { name: true } },
       account: { select: { name: true } },
@@ -517,24 +501,17 @@ export async function listActivities(organizationId: string) {
 
 export type ActivityRow = Awaited<ReturnType<typeof listActivities>>[number]
 
-export async function listEmployees(organizationId: string) {
-  const members = await prisma.member.findMany({
-    where: { organizationId },
-    include: { user: true },
+export async function listEmployees() {
+  const users = await prisma.user.findMany({
     orderBy: { createdAt: "asc" },
   })
 
-  return members.map((member) => ({
-    ...serializeUser(member.user),
-    memberId: member.id,
-    memberRole: member.role,
-  }))
+  return users.map((user) => serializeUser(user))
 }
 
 export type EmployeeRow = Awaited<ReturnType<typeof listEmployees>>[number]
 
 export async function getDashboardData(context: CrmContext) {
-  const organizationId = context.organizationId
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const openStages = [
@@ -555,16 +532,15 @@ export async function getDashboardData(context: CrmContext) {
     recentOpportunities,
     recentActivities,
   ] = await Promise.all([
-    prisma.crmAccount.count({ where: { organizationId } }),
-    prisma.contact.count({ where: { organizationId } }),
+    prisma.crmAccount.count(),
+    prisma.contact.count(),
     prisma.opportunity.aggregate({
-      where: { organizationId, stage: { in: [...openStages] } },
+      where: { stage: { in: [...openStages] } },
       _sum: { amount: true },
       _count: true,
     }),
     prisma.opportunity.aggregate({
       where: {
-        organizationId,
         stage: "CLOSED_WON",
         updatedAt: { gte: startOfMonth },
       },
@@ -573,23 +549,20 @@ export async function getDashboardData(context: CrmContext) {
     }),
     prisma.order.aggregate({
       where: {
-        organizationId,
         status: { in: ["PENDING", "CONFIRMED", "SHIPPED"] },
       },
       _sum: { total: true },
       _count: true,
     }),
     prisma.lead.count({
-      where: { organizationId, status: { in: ["NEW", "CONTACTED"] } },
+      where: { status: { in: ["NEW", "CONTACTED"] } },
     }),
     prisma.opportunity.groupBy({
       by: ["stage"],
-      where: { organizationId },
       _sum: { amount: true },
       _count: true,
     }),
     prisma.opportunity.findMany({
-      where: { organizationId },
       include: {
         account: { select: { name: true } },
         owner: { select: { name: true } },
@@ -598,7 +571,6 @@ export async function getDashboardData(context: CrmContext) {
       take: 6,
     }),
     prisma.activity.findMany({
-      where: { organizationId },
       include: { user: { select: { name: true } } },
       orderBy: { occurredAt: "desc" },
       take: 6,
@@ -606,7 +578,7 @@ export async function getDashboardData(context: CrmContext) {
   ])
 
   return {
-    organizationName: context.organizationName,
+    userName: context.user.name,
     accountCount,
     contactCount,
     openPipeline: {
@@ -646,42 +618,3 @@ export async function getDashboardData(context: CrmContext) {
 }
 
 export type DashboardData = Awaited<ReturnType<typeof getDashboardData>>
-
-export async function listOrganizationsForUser(userId: string) {
-  const memberships = await prisma.member.findMany({
-    where: { userId },
-    include: { organization: true },
-    orderBy: { createdAt: "asc" },
-  })
-
-  return memberships.map((membership) => ({
-    id: membership.organization.id,
-    name: membership.organization.name,
-    slug: membership.organization.slug,
-    role: membership.role,
-  }))
-}
-
-export async function listMembers(organizationId: string) {
-  return prisma.member.findMany({
-    where: { organizationId },
-    include: { user: true },
-    orderBy: { createdAt: "asc" },
-  })
-}
-
-export async function listInvitations(organizationId: string) {
-  const invitations = await prisma.invitation.findMany({
-    where: { organizationId },
-    orderBy: { createdAt: "desc" },
-  })
-
-  return invitations.map((invitation) => ({
-    id: invitation.id,
-    email: invitation.email,
-    role: invitation.role ?? "member",
-    status: invitation.status,
-    expiresAt: invitation.expiresAt.toISOString(),
-    createdAt: invitation.createdAt.toISOString(),
-  }))
-}

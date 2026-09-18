@@ -27,7 +27,7 @@ function toData(values: OpportunityFormData) {
 export async function createOpportunity(
   values: Record<string, unknown>
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const parsed = opportunitySchema.safeParse(values)
 
   if (!parsed.success) {
@@ -35,7 +35,7 @@ export async function createOpportunity(
   }
 
   await prisma.opportunity.create({
-    data: { ...toData(parsed.data), organizationId: context.organizationId },
+    data: toData(parsed.data),
   })
 
   revalidatePath("/dashboard/opportunities")
@@ -47,7 +47,7 @@ export async function updateOpportunity(
   values: Record<string, unknown>,
   id?: string
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   if (!id) return fail("Opportunité introuvable.")
 
@@ -58,7 +58,7 @@ export async function updateOpportunity(
   }
 
   const existing = await prisma.opportunity.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 
@@ -72,10 +72,10 @@ export async function updateOpportunity(
 }
 
 export async function deleteOpportunity(id: string): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const existing = await prisma.opportunity.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 
@@ -92,7 +92,7 @@ export async function addOpportunityLineItem(
   values: Record<string, unknown>,
   opportunityId: string
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const parsed = opportunityLineItemSchema.safeParse(values)
 
   if (!parsed.success) {
@@ -100,7 +100,7 @@ export async function addOpportunityLineItem(
   }
 
   const opportunity = await prisma.opportunity.findFirst({
-    where: { id: opportunityId, organizationId: context.organizationId },
+    where: { id: opportunityId },
     select: { id: true },
   })
 
@@ -123,13 +123,10 @@ export async function addOpportunityLineItem(
 export async function deleteOpportunityLineItem(
   id: string
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const item = await prisma.opportunityLineItem.findFirst({
-    where: {
-      id,
-      opportunity: { organizationId: context.organizationId },
-    },
+    where: { id },
     select: { id: true, opportunityId: true },
   })
 

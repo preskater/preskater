@@ -244,17 +244,3 @@ export const employeeSchema = z.object({
   managerId: optionalId,
 })
 export type EmployeeFormData = z.infer<typeof employeeSchema>
-
-export const organizationSchema = z.object({
-  name: requiredString("Indiquez le nom de l'organisation"),
-  slug: z
-    .string()
-    .trim()
-    .min(2, "2 caractères minimum")
-    .regex(
-      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-      "Utilisez des minuscules, chiffres et tirets"
-    ),
-  logo: z.string().trim().optional(),
-})
-export type OrganizationFormData = z.infer<typeof organizationSchema>

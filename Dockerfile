@@ -82,7 +82,12 @@ COPY prisma ./prisma
 
 # Force the Prisma schema engine for the target platform to be fetched during
 # the image build, so migrations do not depend on network access at runtime.
+# `prisma generate` also emits the client to src/generated, which the seed
+# script imports.
 RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
     npx prisma generate
 
-CMD ["npx", "prisma", "migrate", "deploy"]
+# Apply migrations, then seed. The seed is idempotent (it skips accounts that
+# already exist), so it is safe to run on every deploy and makes a fresh volume
+# self-provisioning.
+CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed"]

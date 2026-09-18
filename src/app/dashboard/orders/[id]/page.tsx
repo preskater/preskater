@@ -20,10 +20,10 @@ export default async function OrderDetailPage({
   params,
 }: PageProps<"/dashboard/orders/[id]">) {
   const { id } = await params
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const [order, productOptions] = await Promise.all([
-    getOrder(context.organizationId, id),
-    getProductOptions(context.organizationId),
+    getOrder(id),
+    getProductOptions(),
   ])
 
   if (!order) {

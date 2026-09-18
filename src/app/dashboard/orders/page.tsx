@@ -10,7 +10,7 @@ import {
 import { OrdersTable } from "./orders-table"
 
 export default async function OrdersPage() {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const [
     rows,
     accountOptions,
@@ -18,11 +18,11 @@ export default async function OrdersPage() {
     opportunityOptions,
     ownerOptions,
   ] = await Promise.all([
-    listOrders(context.organizationId),
-    getAccountOptions(context.organizationId),
-    getContactOptions(context.organizationId),
-    getOpportunityOptions(context.organizationId),
-    getEmployeeOptions(context.organizationId),
+    listOrders(),
+    getAccountOptions(),
+    getContactOptions(),
+    getOpportunityOptions(),
+    getEmployeeOptions(),
   ])
 
   return (

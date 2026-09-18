@@ -3,7 +3,6 @@ import "server-only"
 import { headers } from "next/headers"
 
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
 
 export type CrmContext = {
   user: {
@@ -12,11 +11,8 @@ export type CrmContext = {
     email: string
     role: string
     department: string | null
+    mustChangePassword: boolean
   }
-  organizationId: string
-  organizationName: string
-  organizationSlug: string
-  memberRole: string
 }
 
 export async function getCrmContext(): Promise<CrmContext | null> {
@@ -28,21 +24,6 @@ export async function getCrmContext(): Promise<CrmContext | null> {
     return null
   }
 
-  const memberships = await prisma.member.findMany({
-    where: { userId: session.user.id },
-    include: { organization: true },
-    orderBy: { createdAt: "asc" },
-  })
-
-  if (memberships.length === 0) {
-    return null
-  }
-
-  const activeId = session.session.activeOrganizationId
-  const membership =
-    memberships.find((item) => item.organizationId === activeId) ??
-    memberships[0]
-
   return {
     user: {
       id: session.user.id,
@@ -50,11 +31,8 @@ export async function getCrmContext(): Promise<CrmContext | null> {
       email: session.user.email,
       role: session.user.role ?? "AGENT",
       department: session.user.department ?? null,
+      mustChangePassword: session.user.mustChangePassword ?? false,
     },
-    organizationId: membership.organizationId,
-    organizationName: membership.organization.name,
-    organizationSlug: membership.organization.slug,
-    memberRole: membership.role,
   }
 }
 
@@ -69,11 +47,7 @@ export async function requireCrmContext(): Promise<CrmContext> {
 }
 
 export function isAdmin(context: CrmContext) {
-  return (
-    context.user.role === "ADMIN" ||
-    context.memberRole === "owner" ||
-    context.memberRole === "admin"
-  )
+  return context.user.role === "ADMIN"
 }
 
 export function canManage(context: CrmContext) {

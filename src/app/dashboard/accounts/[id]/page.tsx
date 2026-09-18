@@ -32,8 +32,8 @@ export default async function AccountDetailPage({
   params,
 }: PageProps<"/dashboard/accounts/[id]">) {
   const { id } = await params
-  const context = await requireCrmContext()
-  const account = await getAccount(context.organizationId, id)
+  await requireCrmContext()
+  const account = await getAccount(id)
 
   if (!account) {
     notFound()

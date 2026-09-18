@@ -5,7 +5,7 @@ import { EmployeesTable } from "./employees-table"
 
 export default async function EmployeesPage() {
   const context = await requireCrmContext()
-  const rows = await listEmployees(context.organizationId)
+  const rows = await listEmployees()
 
   return <EmployeesTable rows={rows} canManage={canManage(context)} />
 }

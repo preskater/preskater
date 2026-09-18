@@ -4,7 +4,6 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { getCrmContext, isAdmin } from "@/lib/crm/context"
-import { listOrganizationsForUser } from "@/lib/crm/queries"
 
 export default async function DashboardLayout({
   children,
@@ -12,10 +11,12 @@ export default async function DashboardLayout({
   const context = await getCrmContext()
 
   if (!context) {
-    redirect("/onboarding")
+    redirect("/sign-in")
   }
 
-  const organizations = await listOrganizationsForUser(context.user.id)
+  if (context.user.mustChangePassword) {
+    redirect("/change-password")
+  }
 
   return (
     <SidebarProvider
@@ -34,9 +35,6 @@ export default async function DashboardLayout({
           avatar: "",
           role: context.user.role,
         }}
-        organizations={organizations}
-        activeOrganizationId={context.organizationId}
-        canCreateOrganization={context.user.role === "ADMIN"}
         isAdmin={isAdmin(context)}
       />
       <SidebarInset>

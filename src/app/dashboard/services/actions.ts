@@ -20,7 +20,7 @@ function toData(values: ServiceFormData) {
 export async function createService(
   values: Record<string, unknown>
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const parsed = serviceSchema.safeParse(values)
 
   if (!parsed.success) {
@@ -28,7 +28,7 @@ export async function createService(
   }
 
   await prisma.service.create({
-    data: { ...toData(parsed.data), organizationId: context.organizationId },
+    data: toData(parsed.data),
   })
 
   revalidatePath("/dashboard/services")
@@ -40,7 +40,7 @@ export async function updateService(
   values: Record<string, unknown>,
   id?: string
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   if (!id) return fail("Service introuvable.")
 
@@ -51,7 +51,7 @@ export async function updateService(
   }
 
   const existing = await prisma.service.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 
@@ -64,10 +64,10 @@ export async function updateService(
 }
 
 export async function deleteService(id: string): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const existing = await prisma.service.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 

@@ -26,7 +26,7 @@ function toData(values: LeadFormData) {
 export async function createLead(
   values: Record<string, unknown>
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const parsed = leadSchema.safeParse(values)
 
   if (!parsed.success) {
@@ -34,7 +34,7 @@ export async function createLead(
   }
 
   await prisma.lead.create({
-    data: { ...toData(parsed.data), organizationId: context.organizationId },
+    data: toData(parsed.data),
   })
 
   revalidatePath("/dashboard/leads")
@@ -46,7 +46,7 @@ export async function updateLead(
   values: Record<string, unknown>,
   id?: string
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   if (!id) return fail("Prospect introuvable.")
 
@@ -57,7 +57,7 @@ export async function updateLead(
   }
 
   const existing = await prisma.lead.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 
@@ -70,10 +70,10 @@ export async function updateLead(
 }
 
 export async function deleteLead(id: string): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const existing = await prisma.lead.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 
@@ -87,10 +87,10 @@ export async function deleteLead(id: string): Promise<ActionResult> {
 }
 
 export async function convertLead(id: string): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const lead = await prisma.lead.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
   })
 
   if (!lead) return fail("Prospect introuvable.")
@@ -101,7 +101,6 @@ export async function convertLead(id: string): Promise<ActionResult> {
   await prisma.$transaction(async (tx) => {
     const account = await tx.crmAccount.create({
       data: {
-        organizationId: context.organizationId,
         name: lead.company ?? `${lead.firstName} ${lead.lastName}`,
         type: "PROSPECT",
         ownerId: lead.ownerId,
@@ -110,7 +109,6 @@ export async function convertLead(id: string): Promise<ActionResult> {
 
     const contact = await tx.contact.create({
       data: {
-        organizationId: context.organizationId,
         firstName: lead.firstName,
         lastName: lead.lastName,
         email: lead.email,
@@ -123,7 +121,6 @@ export async function convertLead(id: string): Promise<ActionResult> {
 
     const opportunity = await tx.opportunity.create({
       data: {
-        organizationId: context.organizationId,
         name: `${lead.company ?? `${lead.firstName} ${lead.lastName}`} — opportunité`,
         accountId: account.id,
         ownerId: lead.ownerId,

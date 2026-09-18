@@ -28,7 +28,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["npx", "prisma", "migrate", "deploy"]
+    # The seed is idempotent, so it is safe to run on every start and keeps a
+    # freshly created volume provisioned with the team accounts.
+    command: ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed"]
     restart: "no"
 
   app:

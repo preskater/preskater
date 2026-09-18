@@ -8,11 +8,11 @@ import {
 import { OpportunitiesTable } from "./opportunities-table"
 
 export default async function OpportunitiesPage() {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const [rows, accountOptions, ownerOptions] = await Promise.all([
-    listOpportunities(context.organizationId),
-    getAccountOptions(context.organizationId),
-    getEmployeeOptions(context.organizationId),
+    listOpportunities(),
+    getAccountOptions(),
+    getEmployeeOptions(),
   ])
 
   return (

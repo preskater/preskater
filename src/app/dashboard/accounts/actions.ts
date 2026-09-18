@@ -30,7 +30,7 @@ function toData(values: AccountFormData) {
 export async function createAccount(
   values: Record<string, unknown>
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const parsed = accountSchema.safeParse(values)
 
   if (!parsed.success) {
@@ -38,7 +38,7 @@ export async function createAccount(
   }
 
   await prisma.crmAccount.create({
-    data: { ...toData(parsed.data), organizationId: context.organizationId },
+    data: toData(parsed.data),
   })
 
   revalidatePath("/dashboard/accounts")
@@ -50,7 +50,7 @@ export async function updateAccount(
   values: Record<string, unknown>,
   id?: string
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   if (!id) return fail("Compte introuvable.")
 
@@ -61,7 +61,7 @@ export async function updateAccount(
   }
 
   const existing = await prisma.crmAccount.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 
@@ -78,10 +78,10 @@ export async function updateAccount(
 }
 
 export async function deleteAccount(id: string): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const existing = await prisma.crmAccount.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 

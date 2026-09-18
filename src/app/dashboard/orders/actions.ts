@@ -28,7 +28,7 @@ function toData(values: OrderFormData) {
 export async function createOrder(
   values: Record<string, unknown>
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const parsed = orderSchema.safeParse(values)
 
   if (!parsed.success) {
@@ -37,7 +37,7 @@ export async function createOrder(
 
   try {
     await prisma.order.create({
-      data: { ...toData(parsed.data), organizationId: context.organizationId },
+      data: toData(parsed.data),
     })
   } catch (error) {
     if (
@@ -58,7 +58,7 @@ export async function updateOrder(
   values: Record<string, unknown>,
   id?: string
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   if (!id) return fail("Commande introuvable.")
 
@@ -69,7 +69,7 @@ export async function updateOrder(
   }
 
   const existing = await prisma.order.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 
@@ -93,10 +93,10 @@ export async function updateOrder(
 }
 
 export async function deleteOrder(id: string): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const existing = await prisma.order.findFirst({
-    where: { id, organizationId: context.organizationId },
+    where: { id },
     select: { id: true },
   })
 
@@ -125,7 +125,7 @@ export async function addOrderItem(
   values: Record<string, unknown>,
   orderId: string
 ): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const parsed = orderItemSchema.safeParse(values)
 
   if (!parsed.success) {
@@ -133,7 +133,7 @@ export async function addOrderItem(
   }
 
   const order = await prisma.order.findFirst({
-    where: { id: orderId, organizationId: context.organizationId },
+    where: { id: orderId },
     select: { id: true },
   })
 
@@ -157,10 +157,10 @@ export async function addOrderItem(
 }
 
 export async function deleteOrderItem(id: string): Promise<ActionResult> {
-  const context = await requireCrmContext()
+  await requireCrmContext()
 
   const item = await prisma.orderItem.findFirst({
-    where: { id, order: { organizationId: context.organizationId } },
+    where: { id },
     select: { id: true, orderId: true },
   })
 

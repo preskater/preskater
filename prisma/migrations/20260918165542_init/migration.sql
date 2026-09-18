@@ -28,57 +28,73 @@ CREATE TYPE "OrderStatus" AS ENUM ('DRAFT', 'PENDING', 'CONFIRMED', 'SHIPPED', '
 -- CreateEnum
 CREATE TYPE "ActivityType" AS ENUM ('CALL', 'EMAIL', 'MEETING', 'NOTE', 'TASK');
 
--- AlterTable
-ALTER TABLE "session" ADD COLUMN     "activeOrganizationId" TEXT;
-
--- AlterTable
-ALTER TABLE "user" ADD COLUMN     "department" TEXT,
-ADD COLUMN     "jobTitle" TEXT,
-ADD COLUMN     "managerId" TEXT,
-ADD COLUMN     "phone" TEXT,
-ADD COLUMN     "role" TEXT DEFAULT 'AGENT';
-
 -- CreateTable
-CREATE TABLE "organization" (
+CREATE TABLE "user" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "logo" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL,
-    "metadata" TEXT,
-
-    CONSTRAINT "organization_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "member" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "role" TEXT NOT NULL DEFAULT 'member',
-    "createdAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "member_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "invitation" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "role" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'pending',
+    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "image" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "role" TEXT DEFAULT 'AGENT',
+    "department" TEXT,
+    "jobTitle" TEXT,
+    "phone" TEXT,
+    "managerId" TEXT,
+    "mustChangePassword" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "user_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "session" (
+    "id" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "token" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "ipAddress" TEXT,
+    "userAgent" TEXT,
+    "userId" TEXT NOT NULL,
+
+    CONSTRAINT "session_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "account" (
+    "id" TEXT NOT NULL,
+    "accountId" TEXT NOT NULL,
+    "providerId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "accessToken" TEXT,
+    "refreshToken" TEXT,
+    "idToken" TEXT,
+    "accessTokenExpiresAt" TIMESTAMP(3),
+    "refreshTokenExpiresAt" TIMESTAMP(3),
+    "scope" TEXT,
+    "password" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "account_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "verification" (
+    "id" TEXT NOT NULL,
+    "identifier" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "inviterId" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "invitation_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "verification_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "crm_account" (
     "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "type" "AccountType" NOT NULL DEFAULT 'PROSPECT',
     "industry" TEXT,
@@ -103,7 +119,6 @@ CREATE TABLE "crm_account" (
 -- CreateTable
 CREATE TABLE "contact" (
     "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
     "firstName" TEXT NOT NULL,
     "lastName" TEXT NOT NULL,
     "email" TEXT,
@@ -127,7 +142,6 @@ CREATE TABLE "contact" (
 -- CreateTable
 CREATE TABLE "lead" (
     "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
     "firstName" TEXT NOT NULL,
     "lastName" TEXT NOT NULL,
     "company" TEXT,
@@ -152,7 +166,6 @@ CREATE TABLE "lead" (
 -- CreateTable
 CREATE TABLE "opportunity" (
     "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "accountId" TEXT,
     "ownerId" TEXT,
@@ -182,7 +195,6 @@ CREATE TABLE "opportunity_contact_role" (
 -- CreateTable
 CREATE TABLE "product" (
     "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "sku" TEXT NOT NULL,
     "description" TEXT,
@@ -212,7 +224,6 @@ CREATE TABLE "opportunity_line_item" (
 -- CreateTable
 CREATE TABLE "service" (
     "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "price" DECIMAL(14,2) NOT NULL DEFAULT 0,
@@ -235,7 +246,6 @@ CREATE TABLE "account_service" (
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "organizationId" TEXT NOT NULL,
 
     CONSTRAINT "account_service_pkey" PRIMARY KEY ("id")
 );
@@ -243,7 +253,6 @@ CREATE TABLE "account_service" (
 -- CreateTable
 CREATE TABLE "order" (
     "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
     "orderNumber" TEXT NOT NULL,
     "accountId" TEXT,
     "contactId" TEXT,
@@ -275,7 +284,6 @@ CREATE TABLE "order_item" (
 -- CreateTable
 CREATE TABLE "activity" (
     "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
     "type" "ActivityType" NOT NULL DEFAULT 'NOTE',
     "subject" TEXT NOT NULL,
     "notes" TEXT,
@@ -293,31 +301,28 @@ CREATE TABLE "activity" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "organization_slug_key" ON "organization"("slug");
+CREATE INDEX "user_managerId_idx" ON "user"("managerId");
 
 -- CreateIndex
-CREATE INDEX "member_organizationId_idx" ON "member"("organizationId");
+CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
 
 -- CreateIndex
-CREATE INDEX "member_userId_idx" ON "member"("userId");
+CREATE INDEX "session_userId_idx" ON "session"("userId");
 
 -- CreateIndex
-CREATE INDEX "invitation_organizationId_idx" ON "invitation"("organizationId");
+CREATE UNIQUE INDEX "session_token_key" ON "session"("token");
 
 -- CreateIndex
-CREATE INDEX "invitation_email_idx" ON "invitation"("email");
+CREATE INDEX "account_userId_idx" ON "account"("userId");
 
 -- CreateIndex
-CREATE INDEX "crm_account_organizationId_idx" ON "crm_account"("organizationId");
+CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
 
 -- CreateIndex
 CREATE INDEX "crm_account_ownerId_idx" ON "crm_account"("ownerId");
 
 -- CreateIndex
-CREATE INDEX "crm_account_organizationId_name_idx" ON "crm_account"("organizationId", "name");
-
--- CreateIndex
-CREATE INDEX "contact_organizationId_idx" ON "contact"("organizationId");
+CREATE INDEX "crm_account_name_idx" ON "crm_account"("name");
 
 -- CreateIndex
 CREATE INDEX "contact_accountId_idx" ON "contact"("accountId");
@@ -326,19 +331,13 @@ CREATE INDEX "contact_accountId_idx" ON "contact"("accountId");
 CREATE INDEX "contact_ownerId_idx" ON "contact"("ownerId");
 
 -- CreateIndex
-CREATE INDEX "contact_organizationId_lastName_idx" ON "contact"("organizationId", "lastName");
-
--- CreateIndex
-CREATE INDEX "lead_organizationId_idx" ON "lead"("organizationId");
+CREATE INDEX "contact_lastName_idx" ON "contact"("lastName");
 
 -- CreateIndex
 CREATE INDEX "lead_ownerId_idx" ON "lead"("ownerId");
 
 -- CreateIndex
-CREATE INDEX "lead_organizationId_status_idx" ON "lead"("organizationId", "status");
-
--- CreateIndex
-CREATE INDEX "opportunity_organizationId_idx" ON "opportunity"("organizationId");
+CREATE INDEX "lead_status_idx" ON "lead"("status");
 
 -- CreateIndex
 CREATE INDEX "opportunity_accountId_idx" ON "opportunity"("accountId");
@@ -347,7 +346,7 @@ CREATE INDEX "opportunity_accountId_idx" ON "opportunity"("accountId");
 CREATE INDEX "opportunity_ownerId_idx" ON "opportunity"("ownerId");
 
 -- CreateIndex
-CREATE INDEX "opportunity_organizationId_stage_idx" ON "opportunity"("organizationId", "stage");
+CREATE INDEX "opportunity_stage_idx" ON "opportunity"("stage");
 
 -- CreateIndex
 CREATE INDEX "opportunity_contact_role_contactId_idx" ON "opportunity_contact_role"("contactId");
@@ -356,10 +355,7 @@ CREATE INDEX "opportunity_contact_role_contactId_idx" ON "opportunity_contact_ro
 CREATE UNIQUE INDEX "opportunity_contact_role_opportunityId_contactId_key" ON "opportunity_contact_role"("opportunityId", "contactId");
 
 -- CreateIndex
-CREATE INDEX "product_organizationId_idx" ON "product"("organizationId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "product_organizationId_sku_key" ON "product"("organizationId", "sku");
+CREATE UNIQUE INDEX "product_sku_key" ON "product"("sku");
 
 -- CreateIndex
 CREATE INDEX "opportunity_line_item_opportunityId_idx" ON "opportunity_line_item"("opportunityId");
@@ -368,22 +364,13 @@ CREATE INDEX "opportunity_line_item_opportunityId_idx" ON "opportunity_line_item
 CREATE INDEX "opportunity_line_item_productId_idx" ON "opportunity_line_item"("productId");
 
 -- CreateIndex
-CREATE INDEX "service_organizationId_idx" ON "service"("organizationId");
-
--- CreateIndex
 CREATE INDEX "service_productId_idx" ON "service"("productId");
 
 -- CreateIndex
 CREATE INDEX "account_service_serviceId_idx" ON "account_service"("serviceId");
 
 -- CreateIndex
-CREATE INDEX "account_service_organizationId_idx" ON "account_service"("organizationId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "account_service_accountId_serviceId_key" ON "account_service"("accountId", "serviceId");
-
--- CreateIndex
-CREATE INDEX "order_organizationId_idx" ON "order"("organizationId");
 
 -- CreateIndex
 CREATE INDEX "order_accountId_idx" ON "order"("accountId");
@@ -395,19 +382,16 @@ CREATE INDEX "order_contactId_idx" ON "order"("contactId");
 CREATE INDEX "order_ownerId_idx" ON "order"("ownerId");
 
 -- CreateIndex
-CREATE INDEX "order_organizationId_status_idx" ON "order"("organizationId", "status");
+CREATE INDEX "order_status_idx" ON "order"("status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "order_organizationId_orderNumber_key" ON "order"("organizationId", "orderNumber");
+CREATE UNIQUE INDEX "order_orderNumber_key" ON "order"("orderNumber");
 
 -- CreateIndex
 CREATE INDEX "order_item_orderId_idx" ON "order_item"("orderId");
 
 -- CreateIndex
 CREATE INDEX "order_item_productId_idx" ON "order_item"("productId");
-
--- CreateIndex
-CREATE INDEX "activity_organizationId_idx" ON "activity"("organizationId");
 
 -- CreateIndex
 CREATE INDEX "activity_accountId_idx" ON "activity"("accountId");
@@ -427,38 +411,20 @@ CREATE INDEX "activity_orderId_idx" ON "activity"("orderId");
 -- CreateIndex
 CREATE INDEX "activity_userId_idx" ON "activity"("userId");
 
--- CreateIndex
-CREATE INDEX "user_managerId_idx" ON "user"("managerId");
+-- AddForeignKey
+ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "member" ADD CONSTRAINT "member_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "member" ADD CONSTRAINT "member_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "invitation" ADD CONSTRAINT "invitation_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "invitation" ADD CONSTRAINT "invitation_inviterId_fkey" FOREIGN KEY ("inviterId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "crm_account" ADD CONSTRAINT "crm_account_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "crm_account" ADD CONSTRAINT "crm_account_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "contact" ADD CONSTRAINT "contact_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "contact" ADD CONSTRAINT "contact_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "crm_account"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "contact" ADD CONSTRAINT "contact_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "lead" ADD CONSTRAINT "lead_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "lead" ADD CONSTRAINT "lead_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -473,9 +439,6 @@ ALTER TABLE "lead" ADD CONSTRAINT "lead_convertedContactId_fkey" FOREIGN KEY ("c
 ALTER TABLE "lead" ADD CONSTRAINT "lead_convertedOpportunityId_fkey" FOREIGN KEY ("convertedOpportunityId") REFERENCES "opportunity"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "opportunity" ADD CONSTRAINT "opportunity_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "opportunity" ADD CONSTRAINT "opportunity_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "crm_account"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -488,16 +451,10 @@ ALTER TABLE "opportunity_contact_role" ADD CONSTRAINT "opportunity_contact_role_
 ALTER TABLE "opportunity_contact_role" ADD CONSTRAINT "opportunity_contact_role_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "contact"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "product" ADD CONSTRAINT "product_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "opportunity_line_item" ADD CONSTRAINT "opportunity_line_item_opportunityId_fkey" FOREIGN KEY ("opportunityId") REFERENCES "opportunity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "opportunity_line_item" ADD CONSTRAINT "opportunity_line_item_productId_fkey" FOREIGN KEY ("productId") REFERENCES "product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "service" ADD CONSTRAINT "service_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "service" ADD CONSTRAINT "service_productId_fkey" FOREIGN KEY ("productId") REFERENCES "product"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -507,12 +464,6 @@ ALTER TABLE "account_service" ADD CONSTRAINT "account_service_accountId_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "account_service" ADD CONSTRAINT "account_service_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "account_service" ADD CONSTRAINT "account_service_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "order" ADD CONSTRAINT "order_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "order" ADD CONSTRAINT "order_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "crm_account"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -531,9 +482,6 @@ ALTER TABLE "order_item" ADD CONSTRAINT "order_item_orderId_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "order_item" ADD CONSTRAINT "order_item_productId_fkey" FOREIGN KEY ("productId") REFERENCES "product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "activity" ADD CONSTRAINT "activity_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "activity" ADD CONSTRAINT "activity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;

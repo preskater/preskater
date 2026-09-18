@@ -7,10 +7,10 @@ import {
 import { AccountsTable } from "./accounts-table"
 
 export default async function AccountsPage() {
-  const context = await requireCrmContext()
+  await requireCrmContext()
   const [rows, ownerOptions] = await Promise.all([
-    listAccounts(context.organizationId),
-    getEmployeeOptions(context.organizationId),
+    listAccounts(),
+    getEmployeeOptions(),
   ])
 
   return <AccountsTable rows={rows} ownerOptions={ownerOptions} />
