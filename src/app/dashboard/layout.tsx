@@ -1,21 +1,21 @@
-import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
-import { auth } from "@/lib/auth"
+import { getCrmContext, isAdmin } from "@/lib/crm/context"
+import { listOrganizationsForUser } from "@/lib/crm/queries"
 
 export default async function DashboardLayout({
   children,
 }: LayoutProps<"/dashboard">) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const context = await getCrmContext()
 
-  if (!session) {
-    redirect("/sign-in")
+  if (!context) {
+    redirect("/onboarding")
   }
+
+  const organizations = await listOrganizationsForUser(context.user.id)
 
   return (
     <SidebarProvider
@@ -29,10 +29,15 @@ export default async function DashboardLayout({
       <AppSidebar
         variant="inset"
         user={{
-          name: session.user.name,
-          email: session.user.email,
-          avatar: session.user.image ?? "",
+          name: context.user.name,
+          email: context.user.email,
+          avatar: "",
+          role: context.user.role,
         }}
+        organizations={organizations}
+        activeOrganizationId={context.organizationId}
+        canCreateOrganization={context.user.role === "ADMIN"}
+        isAdmin={isAdmin(context)}
       />
       <SidebarInset>
         <SiteHeader />

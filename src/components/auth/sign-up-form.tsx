@@ -57,7 +57,21 @@ export function SignUpForm({
       return
     }
 
-    setSubmittedEmail(data.email)
+    // The first account is auto-verified and promoted to administrator by the
+    // bootstrap hook, so it can sign in immediately and continue to onboarding.
+    const { error: signInError } = await authClient.signIn.email({
+      email: data.email,
+      password: data.password,
+    })
+
+    if (signInError) {
+      // Everyone else must verify their email first.
+      setSubmittedEmail(data.email)
+      return
+    }
+
+    router.push("/dashboard")
+    router.refresh()
   }
 
   if (submittedEmail) {

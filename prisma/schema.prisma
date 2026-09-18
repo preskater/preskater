@@ -19,7 +19,23 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
+  role        String?      @default("AGENT")
+  department  String?
+  jobTitle    String?
+  phone       String?
+  managerId   String?
+  members     Member[]
+  invitations Invitation[]
+
+  ownedAccounts      CrmAccount[]             @relation("AccountOwner")
+  ownedContacts      Contact[]                @relation("ContactOwner")
+  ownedLeads         Lead[]                   @relation("LeadOwner")
+  ownedOpportunities Opportunity[]            @relation("OpportunityOwner")
+  ownedOrders        Order[]                  @relation("OrderOwner")
+  activities         Activity[]               @relation("ActivityUser")
+
   @@unique([email])
+  @@index([managerId])
   @@map("user")
 }
 
@@ -33,6 +49,8 @@ model Session {
   userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  activeOrganizationId String?
 
   @@unique([token])
   @@index([userId])
@@ -69,4 +87,449 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model Organization {
+  id          String       @id
+  name        String
+  slug        String
+  logo        String?
+  createdAt   DateTime
+  metadata    String?
+  members     Member[]
+  invitations Invitation[]
+
+  accounts       CrmAccount[]
+  contacts       Contact[]
+  leads          Lead[]
+  opportunities  Opportunity[]
+  products       Product[]
+  services       Service[]
+  orders         Order[]
+  activities     Activity[]
+  accountServices AccountService[]
+
+  @@unique([slug])
+  @@map("organization")
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("member")
+  createdAt      DateTime
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitation")
+}
+
+enum AccountType {
+  PROSPECT
+  CUSTOMER
+  PARTNER
+  SUPPLIER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNQUALIFIED
+  CONVERTED
+}
+
+enum LeadSource {
+  WEB
+  REFERRAL
+  COLD_CALL
+  EVENT
+  CAMPAIGN
+  PARTNER
+  OTHER
+}
+
+enum OpportunityStage {
+  PROSPECTING
+  QUALIFICATION
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum ContactRole {
+  DECISION_MAKER
+  INFLUENCER
+  CHAMPION
+  ECONOMIC_BUYER
+  TECHNICAL_BUYER
+  OTHER
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
+}
+
+enum ServiceStatus {
+  ACTIVE
+  INACTIVE
+  DEPRECATED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING
+  CONFIRMED
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  NOTE
+  TASK
+}
+
+model CrmAccount {
+  id             String      @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  type           AccountType @default(PROSPECT)
+  industry       String?
+  website        String?
+  phone          String?
+  email          String?
+  address        String?
+  city           String?
+  state          String?
+  country        String?
+  postalCode     String?
+  annualRevenue  Decimal?    @db.Decimal(14, 2)
+  employeeCount  Int?
+  description    String?
+  ownerId        String?
+  owner          User?       @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  contacts      Contact[]
+  opportunities Opportunity[]
+  orders        Order[]
+  services      AccountService[]
+  activities    Activity[]
+  convertedLeads Lead[]      @relation("LeadConvertedAccount")
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([organizationId, name])
+  @@map("crm_account")
+}
+
+model Contact {
+  id             String      @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String?
+  mobile         String?
+  jobTitle       String?
+  address        String?
+  city           String?
+  state          String?
+  country        String?
+  postalCode     String?
+  notes          String?
+  accountId      String?
+  account        CrmAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  ownerId        String?
+  owner          User?       @relation("ContactOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  opportunities OpportunityContactRole[]
+  orders        Order[]
+  activities    Activity[]
+  convertedLeads Lead[]       @relation("LeadConvertedContact")
+
+  @@index([organizationId])
+  @@index([accountId])
+  @@index([ownerId])
+  @@index([organizationId, lastName])
+  @@map("contact")
+}
+
+model Lead {
+  id                   String      @id @default(cuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  firstName            String
+  lastName             String
+  company              String?
+  email                String?
+  phone                String?
+  jobTitle             String?
+  source               LeadSource  @default(OTHER)
+  status               LeadStatus  @default(NEW)
+  estimatedValue       Decimal?    @db.Decimal(14, 2)
+  notes                String?
+  ownerId              String?
+  owner                User?       @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  convertedAccountId   String?
+  convertedAccount     CrmAccount? @relation("LeadConvertedAccount", fields: [convertedAccountId], references: [id], onDelete: SetNull)
+  convertedContactId   String?
+  convertedContact     Contact?    @relation("LeadConvertedContact", fields: [convertedContactId], references: [id], onDelete: SetNull)
+  convertedOpportunityId String?
+  convertedOpportunity Opportunity? @relation("LeadConvertedOpportunity", fields: [convertedOpportunityId], references: [id], onDelete: SetNull)
+  convertedAt          DateTime?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  activities Activity[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([organizationId, status])
+  @@map("lead")
+}
+
+model Opportunity {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  accountId      String?
+  account        CrmAccount?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  ownerId        String?
+  owner          User?            @relation("OpportunityOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  stage          OpportunityStage @default(PROSPECTING)
+  amount         Decimal          @default(0) @db.Decimal(14, 2)
+  probability    Int              @default(0)
+  closeDate      DateTime?
+  description    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  contacts    OpportunityContactRole[]
+  lineItems   OpportunityLineItem[]
+  orders      Order[]
+  activities  Activity[]
+  convertedFromLeads Lead[]      @relation("LeadConvertedOpportunity")
+
+  @@index([organizationId])
+  @@index([accountId])
+  @@index([ownerId])
+  @@index([organizationId, stage])
+  @@map("opportunity")
+}
+
+model OpportunityContactRole {
+  id            String        @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity   @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  contactId     String
+  contact       Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  role          ContactRole   @default(OTHER)
+  isPrimary     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+
+  @@unique([opportunityId, contactId])
+  @@index([contactId])
+  @@map("opportunity_contact_role")
+}
+
+model Product {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  sku            String
+  description    String?
+  price          Decimal       @default(0) @db.Decimal(14, 2)
+  cost           Decimal       @default(0) @db.Decimal(14, 2)
+  stock          Int           @default(0)
+  status         ProductStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  opportunityLineItems OpportunityLineItem[]
+  orderItems           OrderItem[]
+  services             Service[]
+
+  @@unique([organizationId, sku])
+  @@index([organizationId])
+  @@map("product")
+}
+
+model OpportunityLineItem {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity      Int         @default(1)
+  unitPrice     Decimal     @default(0) @db.Decimal(14, 2)
+  discount      Decimal     @default(0) @db.Decimal(5, 2)
+  createdAt     DateTime    @default(now())
+
+  @@index([opportunityId])
+  @@index([productId])
+  @@map("opportunity_line_item")
+}
+
+model Service {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  price          Decimal       @default(0) @db.Decimal(14, 2)
+  status         ServiceStatus @default(ACTIVE)
+  productId      String?
+  product        Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  accounts AccountService[]
+
+  @@index([organizationId])
+  @@index([productId])
+  @@map("service")
+}
+
+model AccountService {
+  id        String             @id @default(cuid())
+  accountId String
+  account   CrmAccount         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  status    SubscriptionStatus @default(ACTIVE)
+  startedAt DateTime           @default(now())
+  endedAt   DateTime?
+  notes     String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, serviceId])
+  @@index([serviceId])
+  @@index([organizationId])
+  @@map("account_service")
+}
+
+model Order {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orderNumber    String
+  accountId      String?
+  account        CrmAccount?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  contactId      String?
+  contact        Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  opportunityId  String?
+  opportunity    Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  ownerId        String?
+  owner          User?        @relation("OrderOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  status         OrderStatus  @default(DRAFT)
+  orderDate      DateTime     @default(now())
+  total          Decimal      @default(0) @db.Decimal(14, 2)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  items      OrderItem[]
+  activities Activity[]
+
+  @@unique([organizationId, orderNumber])
+  @@index([organizationId])
+  @@index([accountId])
+  @@index([contactId])
+  @@index([ownerId])
+  @@index([organizationId, status])
+  @@map("order")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity  Int      @default(1)
+  unitPrice Decimal  @default(0) @db.Decimal(14, 2)
+  subtotal  Decimal  @default(0) @db.Decimal(14, 2)
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_item")
+}
+
+model Activity {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           ActivityType @default(NOTE)
+  subject        String
+  notes          String?
+  occurredAt     DateTime     @default(now())
+  userId         String?
+  user           User?        @relation("ActivityUser", fields: [userId], references: [id], onDelete: SetNull)
+  accountId      String?
+  account        CrmAccount?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  contactId      String?
+  contact        Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  opportunityId  String?
+  opportunity    Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  leadId         String?
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  orderId        String?
+  order          Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([accountId])
+  @@index([contactId])
+  @@index([opportunityId])
+  @@index([leadId])
+  @@index([orderId])
+  @@index([userId])
+  @@map("activity")
 }

@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Preskater CRM
+
+A multi-tenant CRM built with Next.js (App Router), Prisma, and Better Auth.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
+cp .env.example .env       # fill in the values
+npm run db:up              # start PostgreSQL (Docker, host port 5433)
+npm run db:migrate         # apply migrations
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Bootstrap the first administrator
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+There is no seed script. The **first account** created on a fresh database is
+automatically promoted to `ADMIN` and marked email-verified, so it can sign in
+immediately, create the first organization during onboarding, and invite others.
 
-## Learn More
+1. Sign up at `/sign-up`. The first user is redirected to `/onboarding`.
+2. Create the first organization. Only administrators may create organizations.
+3. Invite teammates from `/dashboard/settings/organization`.
 
-To learn more about Next.js, take a look at the following resources:
+### Verification and invitations
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Email delivery is not wired up. Better Auth logs the relevant URLs to the server
+console instead, so an operator can relay them:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+docker compose logs -f app
+# [verify-email] user@example.com
+# http://localhost:3000/api/auth/verify-email?token=...&callbackURL=...
+# [invitation] user@example.com → Acme
+# http://localhost:3000/invitations/<id>
+```
 
-## Deploy on Vercel
+Every account after the first must verify its email before signing in. Invited
+users sign up, verify via the logged link, then open `/invitations/<id>` to join
+the organization.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Docker
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+cp .env.prod.example .env.prod
+docker compose up --build -d
+```
+
+The `migrate` service runs `prisma migrate deploy` before the app starts. It
+never seeds data, so redeploying does not touch existing rows.
